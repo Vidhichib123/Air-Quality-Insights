@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Air Quality Analytics"
+description = "A live air-quality analytics dashboard that helps people explore monitoring stations, compare pollutant readings, and inspect recent measurement trends using OpenAQ observations."
+version = "1.0.0"
+id = "artifacts/air-quality-analytics"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23260
+
+[services.development]
+run = "pnpm --filter @workspace/air-quality-analytics run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/air-quality-analytics", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/air-quality-analytics/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23260"
+BASE_PATH = "/"

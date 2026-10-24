@@ -1,0 +1,1 @@
+- [OpenAPI parameter exports](openapi-param-export-collision.md) — check generated parameter names when an operation mixes path and query parameters.

@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: air-quality
+    description: Live air-quality monitoring data
 paths:
   /healthz:
     get:
@@ -24,6 +26,83 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /air-quality/city:
+    get:
+      operationId: searchAirQualityCity
+      tags: [air-quality]
+      summary: Find nearby air-quality stations for a city
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 120
+      responses:
+        "200":
+          description: City and nearby monitoring station measurements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CityAirQualityResponse"
+        "400":
+          description: Invalid city search
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: No matching city or nearby monitoring data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "502":
+          description: Upstream air-quality data provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /air-quality/sensor-history:
+    get:
+      operationId: getAirQualitySensorHistory
+      tags: [air-quality]
+      summary: Get recent measurements for a monitoring sensor
+      parameters:
+        - name: sensorId
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: hours
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 168
+            default: 24
+      responses:
+        "200":
+          description: Time-series measurements for the requested sensor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SensorHistoryResponse"
+        "400":
+          description: Invalid sensor or time range
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "502":
+          description: Upstream air-quality data provider unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +112,110 @@ components:
           type: string
       required:
         - status
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    CityAirQualityResponse:
+      type: object
+      properties:
+        city:
+          $ref: "#/components/schemas/CityLocation"
+        fetchedAtUtc:
+          type: string
+          format: date-time
+        stations:
+          type: array
+          items:
+            $ref: "#/components/schemas/AirQualityStation"
+      required: [city, fetchedAtUtc, stations]
+    CityLocation:
+      type: object
+      properties:
+        name:
+          type: string
+        admin1:
+          type: [string, "null"]
+        country:
+          type: string
+        countryCode:
+          type: [string, "null"]
+        latitude:
+          type: number
+        longitude:
+          type: number
+      required: [name, admin1, country, countryCode, latitude, longitude]
+    AirQualityStation:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        locality:
+          type: [string, "null"]
+        latitude:
+          type: number
+        longitude:
+          type: number
+        distanceKm:
+          type: number
+        measurements:
+          type: array
+          items:
+            $ref: "#/components/schemas/AirQualityMeasurement"
+      required: [id, name, locality, latitude, longitude, distanceKm, measurements]
+    AirQualityMeasurement:
+      type: object
+      properties:
+        sensorId:
+          type: integer
+        parameter:
+          type: string
+        displayName:
+          type: string
+        unit:
+          type: string
+        value:
+          type: number
+        measuredAtUtc:
+          type: string
+          format: date-time
+        measuredAtLocal:
+          type: string
+          format: date-time
+      required:
+        [sensorId, parameter, displayName, unit, value, measuredAtUtc, measuredAtLocal]
+    SensorHistoryResponse:
+      type: object
+      properties:
+        sensorId:
+          type: integer
+        parameter:
+          type: string
+        displayName:
+          type: string
+        unit:
+          type: string
+        hours:
+          type: integer
+        measurements:
+          type: array
+          items:
+            $ref: "#/components/schemas/AirQualityHistoryPoint"
+      required: [sensorId, parameter, displayName, unit, hours, measurements]
+    AirQualityHistoryPoint:
+      type: object
+      properties:
+        value:
+          type: number
+        measuredAtUtc:
+          type: string
+          format: date-time
+        measuredAtLocal:
+          type: string
+          format: date-time
+      required: [value, measuredAtUtc, measuredAtLocal]
 
